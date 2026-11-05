@@ -178,6 +178,15 @@ label would state something untrue about this prototype, the wording was changed
   because no validated translations exist yet.
 - **Settings** is not a designed screen. It holds the period selector, the signal rules and a CSV download.
 
+## Publishing on Vercel
+
+`vercel.json` tells Vercel to serve the `docs/` folder as a static site (no build).
+One-time setup: in Vercel choose **Add New → Project**, import the GitHub repository
+`tholu478/DGARI-`, leave the settings as detected (Framework: Other), and press
+**Deploy**. After that, every push to `main` redeploys automatically. That includes
+the daily data commits made by the GitHub Action, so the Vercel site stays up to
+date. GitHub Pages keeps working alongside it.
+
 ## Limitations
 
 - **Not a flood forecast.** Flooding also depends on river flow, upstream rainfall
