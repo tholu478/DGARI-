@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DGARI Flood Prototype</title>
+  <meta name="description" content="Research prototype: recent CHIRPS rainfall in Nigerian states compared with the 1991-2020 average. A rainfall-anomaly indicator, not a validated flood forecast.">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR (Figma: "Sidebar") ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-name">DGARI</div>
+      <div class="brand-sub">Disaster Risk Interface</div>
+    </div>
+
+    <nav aria-label="Sections">
+      <div class="side-label">Navigation</div>
+      <a class="nav-item active" href="#overview"><span class="ico">◇</span>Overview</a>
+      <a class="nav-item" href="#map-section"><span class="ico">⬡</span>Map</a>
+      <a class="nav-item" href="#states"><span class="ico">≡</span>All states</a>
+      <a class="nav-item" href="#methods"><span class="ico">ⓘ</span>Methods &amp; limitations</a>
+    </nav>
+
+    <div class="side-block">
+      <div class="side-label">Data sources</div>
+      <div class="source"><span class="dot on"></span>CHIRPS v3.0 rainfall</div>
+      <div class="source off" title="Not used in this prototype"><span class="dot"></span>NDVI <em>not used</em></div>
+      <div class="source off" title="Not used in this prototype"><span class="dot"></span>River gauges <em>not used</em></div>
+    </div>
+
+    <div class="freshness">
+      <div class="side-label">Data processed</div>
+      <div id="generated" class="fresh-value">—</div>
+    </div>
+  </aside>
+
+  <!-- ============ WORKSPACE ============ -->
+  <div class="workspace">
+    <header class="topbar">
+      <div class="topbar-title">DGARI · Nigeria flood (rainfall) prototype</div>
+      <div class="proto-badge">Research prototype · not an official warning</div>
+    </header>
+
+    <main>
+      <!-- Page heading (Figma: "Page heading") -->
+      <section id="overview" class="page-heading">
+        <div>
+          <h1>Rainfall anomaly overview</h1>
+          <p class="lede">Recent rainfall in each Nigerian state compared with the
+            1991–2020 average for the same time of year.</p>
+        </div>
+        <div class="heading-controls">
+          <label for="period" class="sr-only">Period</label>
+          <select id="period"></select>
+          <div id="product-chip" class="chip"></div>
+        </div>
+      </section>
+
+      <div class="notice" role="note">
+        <strong>Rainfall-anomaly indicator, not a flood forecast.</strong>
+        Flags show where recent satellite-and-station rainfall estimates are well above
+        normal. They do not account for river levels, dam releases, soil saturation,
+        drainage or exposure, and the thresholds have not been validated against flood
+        records. <a href="#methods">Read the methods and limitations.</a>
+      </div>
+
+      <!-- Metric cards (Figma: "Metrics") -->
+      <section class="metrics">
+        <div class="card metric">
+          <div class="metric-label">States at <b>Warning</b></div>
+          <div id="m-warning" class="metric-value c-warning">–</div>
+          <div class="metric-detail">≥150% of normal and ≥50 mm above</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">States at <b>Watch</b></div>
+          <div id="m-watch" class="metric-value c-watch">–</div>
+          <div class="metric-detail">≥125% of normal and ≥25 mm above</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">States <b>Normal</b></div>
+          <div id="m-normal" class="metric-value c-normal">–</div>
+          <div class="metric-detail">Includes below-normal rainfall</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-label">Rainfall period</div>
+          <div id="m-period" class="metric-value small">–</div>
+          <div id="m-period-detail" class="metric-detail">–</div>
+        </div>
+      </section>
+
+      <!-- Map + state detail (Figma: "Primary panels") -->
+      <section class="panels">
+        <div id="map-section" class="card map-card">
+          <div class="section-title">
+            <h2>State rainfall anomaly map</h2>
+            <p>Click a state for details. Colour = flag from the thresholds below.</p>
+          </div>
+          <div class="map-wrap">
+            <div id="map" role="application" aria-label="Map of Nigerian states coloured by rainfall flag"></div>
+            <div class="legend" aria-hidden="true">
+              <div class="legend-title">Rainfall flag</div>
+              <div><span class="sw sw-warning"></span>Warning</div>
+              <div><span class="sw sw-watch"></span>Watch</div>
+              <div><span class="sw sw-normal"></span>Normal</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card detail-card" aria-live="polite">
+          <div class="section-title">
+            <h2>State detail</h2>
+            <p id="detail-sub">Select a state on the map or table</p>
+          </div>
+          <div id="detail"><p class="muted">No state selected.</p></div>
+        </div>
+      </section>
+
+      <!-- Table + review (Figma: "Recent alerts" / "Review queue") -->
+      <section class="panels">
+        <div id="states" class="card table-card">
+          <div class="section-title">
+            <h2>All states</h2>
+            <p>Sorted by percent of normal rainfall (highest first)</p>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr>
+                <th>State</th><th>Signal</th>
+                <th class="num">Recent (mm)</th><th class="num">Normal (mm)</th>
+                <th class="bar-col">% of normal</th>
+              </tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card review-card">
+          <div class="section-title">
+            <h2>Human review</h2>
+            <p>Required before any flag is acted on</p>
+          </div>
+          <div class="review-item">
+            <div class="review-count" id="review-count">0</div>
+            <div>
+              <div class="review-title">Flags not yet reviewed</div>
+              <div class="review-desc">No one has checked these flags. They are
+                produced automatically.</div>
+            </div>
+          </div>
+          <p class="review-note">Before treating a flag as meaningful, a qualified person
+            would need to compare it with river-level and dam-release information,
+            official forecasts and seasonal outlooks, and local reports. This page
+            supports that conversation; it does not replace it.</p>
+        </div>
+      </section>
+
+      <!-- Methods and limitations -->
+      <section id="methods" class="card methods">
+        <div class="section-title">
+          <h2>Methods and limitations</h2>
+          <p>What this page calculates, and what it cannot tell you</p>
+        </div>
+
+        <div class="methods-grid">
+          <div>
+            <h3>What is calculated</h3>
+            <ol>
+              <li><b>Recent rainfall.</b> CHIRPS v3.0 rainfall estimates for the last three
+                dekads (10-day periods, about one month) are added together and averaged
+                over each state’s area.</li>
+              <li><b>Normal rainfall.</b> The same three calendar dekads are totalled for
+                each year from 1991 to 2020, and those 30 totals are averaged.</li>
+              <li><b>Comparison.</b> <i>Percent of normal</i> = recent ÷ normal × 100.
+                <i>Anomaly</i> = recent − normal, in millimetres.</li>
+              <li><b>Flag.</b> Assigned from the rules in the table. Both conditions must
+                be met. The millimetre condition prevents dry-season false alarms, where
+                a few millimetres can be a large percentage.</li>
+            </ol>
+
+            <table class="rules">
+              <thead><tr><th>Flag</th><th>% of normal</th><th>and anomaly</th></tr></thead>
+              <tbody id="rules-body"></tbody>
+            </table>
+            <p class="muted small">These thresholds are illustrative design values chosen
+              to be easy to explain. They have not been calibrated against Nigerian
+              flood records (see dissertation Section 4.9).</p>
+          </div>
+
+          <div>
+            <h3>Limitations</h3>
+            <ul>
+              <li><b>Not a flood forecast.</b> Flooding also depends on river flow, upstream
+                rainfall (including outside Nigeria), dam operations, soil saturation,
+                topography, drainage and exposure. None of these are included.</li>
+              <li><b>Not validated.</b> The flags have not been tested for how often they
+                coincide with real floods (hit rate or false alarms).</li>
+              <li><b>Looks back, not ahead.</b> It summarises rainfall that has already
+                fallen. It does not predict future rainfall.</li>
+              <li><b>Coarse in space and time.</b> State averages hide local extremes,
+                and dekadal totals hide short intense storms that drive flash flooding.
+                CHIRPS grid cells are about 5.5 km across.</li>
+              <li><b>Preliminary data.</b> The newest dekads often come from the
+                preliminary CHIRPS product, which has fewer quality checks and can change
+                when the final product is released.</li>
+              <li><b>Estimates, not gauges.</b> CHIRPS blends satellite data with station
+                data. Station coverage in parts of Nigeria is sparse.</li>
+              <li><b>No user testing.</b> The interface follows the DGARI design
+                specification (Appendix A) but has not been evaluated with users.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sources">
+          <h3>Data and citation</h3>
+          <p><b>Rainfall:</b> CHIRPS v3.0, Climate Hazards Center, UC Santa Barbara
+            (<a href="https://www.chc.ucsb.edu/data/chirps3">chc.ucsb.edu/data/chirps3</a>);
+            method described in Funk et al. (2015) for CHIRPS v2.0.
+            <span id="dekad-sources"></span></p>
+          <p><b>Boundaries:</b> geoBoundaries gbOpen NGA ADM1 (source: <span id="bnd-source">GRID3</span>,
+            <span id="bnd-license">CC BY 4.0</span>), Runfola et al. (2020),
+            <a href="https://www.geoboundaries.org">geoboundaries.org</a>. Boundaries are
+            shown for analysis only and do not imply any position on borders.</p>
+          <p><b>Context:</b> built from the MSc dissertation <i>The Disaster Governance and AI
+            Readiness Index (DGARI)</i>, Northumbria University. This is an interactive
+            presentation of the interface concept with one live data layer. It is not a
+            functioning AI early-warning system and contains no AI or predictive model.
+            <a href="data/state_results.csv">Download the results (CSV)</a>.</p>
+        </div>
+      </section>
+
+      <footer class="foot">DGARI flood prototype · research use only</footer>
+    </main>
+  </div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

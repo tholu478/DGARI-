@@ -1,0 +1,82 @@
+# Refresh the CHIRPS rainfall data every day and publish the dashboard.
+#
+# What happens:
+#   1. "refresh" job (on the daily schedule, or when you press "Run workflow"):
+#      runs the Python pipeline. If the results changed, it saves them back
+#      into the repository with a commit.
+#   2. "deploy" job: publishes the docs/ folder to GitHub Pages.
+#
+# One-time setup in the repository: Settings -> Pages -> Source: "GitHub Actions".
+
+name: Refresh data and deploy
+
+on:
+  schedule:
+    - cron: "17 6 * * *"     # every day at 06:17 UTC (CHIRPS adds new data every 5 days)
+  workflow_dispatch:          # adds a "Run workflow" button on the Actions tab
+  push:
+    branches: [main]          # redeploy when you change the website
+
+permissions:
+  contents: write             # lets the refresh job commit new data
+  pages: write                # lets the deploy job publish to Pages
+  id-token: write
+
+concurrency:
+  group: refresh-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Run the rainfall pipeline
+        run: python pipeline/run_pipeline.py
+
+      - name: Save results if they changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Ignore the timestamp line, so we only commit when the data changed.
+          if git diff --quiet -I'generated_utc' -- docs/data data/cache; then
+            echo "No new data; nothing to commit."
+            git checkout -- docs/data
+          else
+            git add docs/data data/cache
+            git commit -m "Refresh CHIRPS rainfall data"
+            git push
+          fi
+
+  deploy:
+    needs: refresh
+    # Run after a successful refresh, or on its own when the trigger was a push.
+    if: ${{ !cancelled() && needs.refresh.result != 'failure' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main           # pick up the commit the refresh job just made
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

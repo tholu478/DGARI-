@@ -1,0 +1,6 @@
+geopandas>=1.0
+rasterio>=1.4
+rasterstats>=0.20
+pandas>=2.2
+numpy>=1.26
+requests>=2.31
