@@ -1,7 +1,7 @@
 # Refresh the CHIRPS rainfall data every day and publish the dashboard.
 #
 # What happens:
-#   1. "refresh" job (on the daily schedule, or when you press "Run workflow"):
+#   1. "refresh" job (daily, on every push, or when you press "Run workflow"):
 #      runs the Python pipeline. If the results changed, it saves them back
 #      into the repository with a commit.
 #   2. "deploy" job: publishes the docs/ folder to GitHub Pages.
@@ -28,7 +28,6 @@ concurrency:
 
 jobs:
   refresh:
-    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -45,6 +44,12 @@ jobs:
       - name: Run the rainfall pipeline
         run: python pipeline/run_pipeline.py
 
+      - name: Build the September 2022 example (only if it is missing its trend data)
+        run: |
+          if ! grep -q '"trend"' docs/data/example-2022-09/summary.json 2>/dev/null; then
+            python pipeline/run_pipeline.py --end 2022-09-3 --out docs/data/example-2022-09
+          fi
+
       - name: Save results if they changed
         run: |
           git config user.name "github-actions[bot]"
@@ -56,13 +61,14 @@ jobs:
           else
             git add docs/data data/cache
             git commit -m "Refresh CHIRPS rainfall data"
+            git pull --rebase origin main
             git push
           fi
 
   deploy:
     needs: refresh
-    # Run after a successful refresh, or on its own when the trigger was a push.
-    if: ${{ !cancelled() && needs.refresh.result != 'failure' }}
+    # Publish after a successful refresh.
+    if: ${{ !cancelled() && needs.refresh.result == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

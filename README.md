@@ -24,7 +24,9 @@ requirements.txt              Python packages the pipeline needs
 data/boundaries/              Nigeria state boundaries (geoBoundaries / GRID3)
 data/cache/                   Saved baseline values, so they are not re-downloaded
 docs/                         The website (this folder is what GitHub Pages publishes)
-  index.html, style.css, app.js
+  index.html, style.css, app.js   (the five screens)
+  assets/                     Inter font and Lucide icons (as named in the Figma layers)
+  data/rivers.geojson         Main rivers for the map (Natural Earth, made by pipeline/make_rivers.py)
   data/                       Files written by the pipeline for the latest period
   data/example-2022-09/       The same calculation for 1–30 Sept 2022 (historical example)
   vendor/leaflet/             The Leaflet map library (copied in, so no CDN is needed)
@@ -136,21 +138,45 @@ five days, so most days nothing changes.
 
 ---
 
-## How the interface follows the design specification (Appendix A, Section 3.10)
+## The interface: one view per Figma screen (Appendix A, Section 3.10)
 
-| Figma element | In this prototype |
-|---|---|
-| Sidebar: navigation, data sources, last sync | Same structure. Data sources show CHIRPS as active and **NDVI and river gauges as "not used"** rather than implying they are live. |
-| Metric cards | Count of states at Warning / Watch / Normal, plus the rainfall period |
-| Regional risk map with legend | Leaflet map of states coloured by flag, legend in the same position |
-| Recent alerts table and area-health bars | One "All states" table with a signal pill and a percent-of-normal bar |
-| Review queue ("human verification required") | "Human review" card: every flag is marked **not reviewed** |
-| "Disaster Officer" profile | Replaced with a "Research prototype · not an official warning" label, since there are no users or roles |
+The website reproduces the five screens of the DGARI Figma specification, using
+the same layout, colours (#155eef blue, #d92d20 red, #f79009 amber, #12b76a green),
+Inter typeface and Lucide icons. The sidebar switches between them.
 
-Design elements from the Figma that are **not** built here: the drought/NDVI
-layer, the warning-issuing screen, AI-assisted risk assessment, multilingual
-SMS/USSD messaging, and user roles. These would need real data, institutional
-arrangements and testing, which the dissertation identifies as future work.
+| Figma screen | Address | What it shows from the data |
+|---|---|---|
+| Overview | `#overview` | Warning count, areas monitored, pending reviews, system status; Recent Alerts (top 4 states); Quick Access; Monitored Area Health (top 3); Review Queue |
+| Monitoring | `#monitoring` | Key figures, a small risk map, Active Alerts, and a 12-dekad Rainfall Trend chart. The period selector switches between the latest data and the Sept 2022 example |
+| Risk Assessment | `#risk?s=NG-LA` | One state's signal, the rule-based assessment, the signals considered, and a Governance Check using Nigeria's DGARI ratings (Section 4.3). "Send for Institutional Review" opens a pre-filled email |
+| Warnings (public view) | `#warnings?s=NG-LA` | Public-facing warning for a chosen state: banner, area/risk/issuer cards, "What should I do?", warning information, and accessibility tools (read aloud, larger text, high contrast) |
+| Map | `#map` | All states, the main rivers, and dashed zones with labels for states that need attention |
+
+Signal levels follow the Figma legend:
+
+| Level | Rule | Colour |
+|---|---|---|
+| Elevated / Warning | ≥150% of normal and ≥50 mm above | red |
+| Elevated / Advisory (Watch) | ≥125% of normal and ≥25 mm above | amber |
+| Monitoring | at or above normal, below the watch rule | blue |
+| Normal | below normal | green |
+
+### Where the build differs from the Figma file, and why
+
+The design was written for a future system with more data sources. Where a Figma
+label would state something untrue about this prototype, the wording was changed:
+
+- **NDVI** is shown as "Not connected" (grey dot), not live. Vegetation reads "Not connected".
+- **"AI-Assisted Assessment"** is titled "Automated Assessment · rule-based". The prototype has no AI model.
+- **Warning screen "Issued by"** reads "Not yet issued", and Status reads "Draft · not an official
+  warning". The Figma text ("Authorised disaster management authority / Official warning") would
+  misrepresent an automated signal as an official warning.
+- **Monitoring cards**: "Communities at risk" became "States at risk", and "Reporting stations"
+  became "Data coverage", because the data is state-level and has no stations.
+- **Governance Check** uses Nigeria's actual DGARI ratings instead of the placeholder "Ready" values.
+- **Language menu**: only English is available. Hausa, Yorùbá, Igbo and Pidgin are listed as "soon",
+  because no validated translations exist yet.
+- **Settings** is not a designed screen. It holds the period selector, the signal rules and a CSV download.
 
 ## Limitations
 

@@ -41,6 +41,7 @@ import json              # writes the summary file the website reads
 import re                # "regular expressions": finds file names in web pages
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor  # read several files at once
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -64,6 +65,14 @@ OUTPUT_DIR = PROJECT_DIR / "docs" / "data"
 
 # How many 10-day periods (dekads) count as "recent". 3 dekads ~ 1 month.
 RECENT_DEKADS = 3
+
+# How many dekads to show in the "Rainfall Trend" chart. 12 dekads ~ 4 months.
+TREND_DEKADS = 12
+
+# How many CHIRPS files to read at the same time. 1 = one after another.
+# In testing the CHIRPS server slowed down sharply with parallel reads,
+# so reading one file at a time was actually faster.
+PARALLEL_READS = 1
 
 # The baseline ("normal") years. 1991-2020 is the WMO standard normal period.
 BASELINE_START_YEAR = 1991
@@ -203,7 +212,7 @@ def get_state_boundaries():
 # STEP 2: find which CHIRPS dekads exist online
 # --------------------------------------------------------------------------
 
-def get_with_retries(url, tries=6):
+def get_with_retries(url, tries=10):
     """Download a web page, trying again a few times if the connection drops."""
     for attempt in range(1, tries + 1):
         try:
@@ -214,7 +223,7 @@ def get_with_retries(url, tries=6):
             if attempt == tries:
                 raise
             print(f"         (retrying {url}: {error})")
-            time.sleep(2 * attempt)
+            time.sleep(3 * attempt)
 
 
 def list_available_dekads():
@@ -262,18 +271,27 @@ GDAL_NETWORK_SETTINGS = dict(
 )
 
 
-def state_mean_rainfall(url, states):
+def state_mean_rainfall(url, states, tries=8):
     """Average rainfall (mm) in each state for one CHIRPS file.
 
     '/vsicurl/' tells rasterio to read the file straight from the web.
     We only read the rectangle around Nigeria (a "window").
+    If the connection drops part-way, we wait and try again.
     """
-    with rasterio.Env(**GDAL_NETWORK_SETTINGS):
-        with rasterio.open("/vsicurl/" + url) as src:
-            window = from_bounds(*NIGERIA_BOX, src.transform)
-            window = window.round_offsets().round_lengths()
-            rain = src.read(1, window=window)
-            transform = src.window_transform(window)
+    for attempt in range(1, tries + 1):
+        try:
+            with rasterio.Env(**GDAL_NETWORK_SETTINGS):
+                with rasterio.open("/vsicurl/" + url) as src:
+                    window = from_bounds(*NIGERIA_BOX, src.transform)
+                    window = window.round_offsets().round_lengths()
+                    rain = src.read(1, window=window)
+                    transform = src.window_transform(window)
+            break
+        except rasterio.errors.RasterioError as error:
+            if attempt == tries:
+                raise
+            print(f"         (retrying {url.rsplit('/', 1)[-1]}: {str(error)[:80]})")
+            time.sleep(3 * attempt)
 
     # rasterstats looks at every grid cell whose centre falls inside a
     # state, ignores "no data" cells, and returns their average.
@@ -295,33 +313,56 @@ def load_cache():
     return pd.DataFrame(columns=["year", "month", "dekad", "shapeISO", "mean_mm"])
 
 
+def fill_cache(keys, states):
+    """Make sure the cache holds state averages for every (year, month, dekad)
+    in `keys`. Anything missing is read from the CHIRPS FINAL archive."""
+    cache = load_cache()
+    have = set(zip(cache.year, cache.month, cache.dekad))
+    missing = sorted(set(keys) - have)
+    if not missing:
+        return cache
+
+    print(f"         reading {len(missing)} baseline files (saved for next time) ...")
+
+    def read_one(key):
+        y, m, d = key
+        url = f"{FINAL_DIR}/chirps-v3.0.{y}.{m:02d}.{d}.tif"
+        return key, state_mean_rainfall(url, states)
+
+    def save(cache, new_rows):
+        cache = pd.concat([cache, pd.DataFrame(new_rows)], ignore_index=True)
+        CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        cache.sort_values(["year", "month", "dekad", "shapeISO"]).to_csv(
+            CACHE_FILE, index=False, float_format="%.3f")
+        return cache
+
+    # Work in batches and save after each one, so an interrupted run
+    # does not lose what it has already read.
+    for start in range(0, len(missing), 30):
+        batch = missing[start:start + 30]
+        new_rows = []
+        with ThreadPoolExecutor(max_workers=PARALLEL_READS) as pool:
+            for (y, m, d), values in pool.map(read_one, batch):
+                for iso, value in zip(states.shapeISO, values):
+                    new_rows.append(dict(year=y, month=m, dekad=d,
+                                         shapeISO=iso, mean_mm=value))
+        cache = save(cache, new_rows)
+        print(f"         ... {min(start + 30, len(missing))}/{len(missing)} done")
+    return cache
+
+
 def build_baseline(recent, states, available):
     """For each baseline year, add up the same calendar dekads as `recent`.
 
     Returns a table: one row per state, one column per baseline year,
     each value = total rainfall (mm) over those dekads in that year.
     """
-    cache = load_cache()
-    have = set(zip(cache.year, cache.month, cache.dekad))
-    new_rows = []
-
+    keys = []
     for year in range(BASELINE_START_YEAR, BASELINE_END_YEAR + 1):
         for (_, month, d) in recent:
             # A window that crosses New Year (e.g. Dec-Jan) needs year+1.
-            y = year + (1 if month < recent[0][1] else 0)
-            if (y, month, d) in have:
-                continue
-            url = f"{FINAL_DIR}/chirps-v3.0.{y}.{month:02d}.{d}.tif"
-            print(f"         baseline: reading {dekad_label(y, month, d)}")
-            for iso, value in zip(states.shapeISO, state_mean_rainfall(url, states)):
-                new_rows.append(dict(year=y, month=month, dekad=d,
-                                     shapeISO=iso, mean_mm=value))
-
-    if new_rows:
-        cache = pd.concat([cache, pd.DataFrame(new_rows)], ignore_index=True)
-        CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        cache.sort_values(["year", "month", "dekad", "shapeISO"]).to_csv(
-            CACHE_FILE, index=False, float_format="%.3f")
+            keys.append((year + (1 if month < recent[0][1] else 0), month, d))
+    cache = fill_cache(keys, states)
 
     # Keep only the dekads we need, then total them up within each "season".
     wanted = {(m, d) for (_, m, d) in recent}
@@ -332,6 +373,45 @@ def build_baseline(recent, states, available):
     totals = rows.pivot_table(index="shapeISO", columns="season_year",
                               values="mean_mm", aggfunc="sum")
     return totals
+
+
+def build_trend(end, available, states):
+    """Rainfall for each of the last TREND_DEKADS dekads, next to the
+    1991-2020 normal for that dekad. Used for the "Rainfall Trend" chart.
+
+    Returns a list with one entry per dekad (oldest first)."""
+    keys = [end]
+    while len(keys) < TREND_DEKADS:
+        keys.insert(0, previous_dekad(*keys[0]))
+    keys = [k for k in keys if k in available]
+
+    with ThreadPoolExecutor(max_workers=PARALLEL_READS) as pool:
+        values = list(pool.map(lambda k: state_mean_rainfall(available[k][0], states), keys))
+
+    calendar_dekads = {(m, d) for (_, m, d) in keys}
+    cache = fill_cache([(y, m, d) for y in range(BASELINE_START_YEAR, BASELINE_END_YEAR + 1)
+                        for (m, d) in calendar_dekads], states)
+    in_baseline = cache[cache.year.between(BASELINE_START_YEAR, BASELINE_END_YEAR)]
+    normals = in_baseline.groupby(["month", "dekad", "shapeISO"]).mean_mm.mean()
+
+    trend = []
+    for k, vals in zip(keys, values):
+        _, m, d = k
+        by_state = {}
+        for iso, v in zip(states.shapeISO, vals):
+            by_state[iso] = [None if v is None else round(v, 1),
+                             round(float(normals.loc[(m, d, iso)]), 1)]
+        ok = [x for x in by_state.values() if x[0] is not None]
+        trend.append({
+            "label": dekad_label(*k),
+            "start": dekad_dates(*k)[0],
+            "product": available[k][1],
+            # Nigeria-wide value = simple average of the state averages.
+            "nigeria_mm": round(float(np.mean([x[0] for x in ok])), 1),
+            "nigeria_normal_mm": round(float(np.mean([x[1] for x in ok])), 1),
+            "by_state": by_state,
+        })
+    return trend
 
 
 # --------------------------------------------------------------------------
@@ -369,7 +449,7 @@ def compare(states, recent_totals, baseline_totals):
 # --------------------------------------------------------------------------
 
 def write_outputs(results, states_simple, recent, available, boundary_source,
-                  out_dir=OUTPUT_DIR):
+                  trend, out_dir=OUTPUT_DIR):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1) A plain CSV anyone can open in Excel.
@@ -399,6 +479,9 @@ def write_outputs(results, states_simple, recent, available, boundary_source,
             ["warning", "watch", "normal"], fill_value=0).to_dict(),
         "rainfall_source": "CHIRPS v3.0, Climate Hazards Center, UC Santa Barbara",
         "boundary_source": boundary_source,
+        "states_with_data": int(results.recent_mm.notna().sum()),
+        "states_total": int(len(results)),
+        "trend": trend,
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     print(f"Step 6: wrote results to {out_dir}")
@@ -432,12 +515,15 @@ def main():
     print(f"Step 4: building the {BASELINE_START_YEAR}-{BASELINE_END_YEAR} baseline ...")
     baseline_totals = build_baseline(recent, states, available)
 
+    print(f"Step 4b: rainfall trend for the last {TREND_DEKADS} dekads ...")
+    trend = build_trend(recent[-1], available, states)
+
     print("Step 5: comparing and assigning flags ...")
     results = compare(states, recent_totals, baseline_totals)
     print(results.flag.value_counts().to_string())
 
     write_outputs(results, states_simple, recent, available, boundary_source,
-                  Path(args.out))
+                  trend, Path(args.out))
 
 
 if __name__ == "__main__":
