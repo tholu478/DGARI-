@@ -78,6 +78,8 @@ select { font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid va
 
 .notice { margin: 22px 0; padding: 14px 18px; border-radius: var(--radius); background: var(--watch-soft); border: 1px solid #fcd9a4; color: #78350f; font-size: 14px; }
 .notice a { color: #78350f; font-weight: 600; }
+.example-note { background: #f5edff; border-color: #e1cdfb; color: #4c1d95; margin-top: -8px; }
+[hidden] { display: none !important; }
 
 /* ---------- Cards ---------- */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 1px 2px rgba(16,24,40,.04); }

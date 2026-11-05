@@ -1,0 +1,38 @@
+shapeISO,state,recent_mm,normal_mm,anomaly_mm,percent_of_normal,baseline_years_drier,baseline_years,baseline_min_mm,baseline_max_mm,flag
+NG-JI,Jigawa,182.5,101.8,80.8,179,30,30,30.6,163.2,warning
+NG-KN,Kano,276.7,180.4,96.3,153,29,30,51.3,277.0,warning
+NG-BO,Borno,191.6,126.7,64.9,151,29,30,56.7,222.1,warning
+NG-KT,Katsina,209.5,138.5,70.9,151,30,30,59.8,195.3,warning
+NG-SO,Sokoto,161.8,107.8,54.0,150,26,30,46.1,199.2,warning
+NG-YO,Yobe,159.1,109.0,50.0,146,29,30,33.0,167.0,watch
+NG-KE,Kebbi,248.1,183.1,65.0,136,27,30,97.8,265.0,watch
+NG-BA,Bauchi,238.7,192.5,46.3,124,25,30,71.2,311.3,normal
+NG-ZA,Zamfara,215.1,178.0,37.0,121,24,30,103.5,275.6,normal
+NG-GO,Gombe,221.6,194.1,27.6,114,22,30,100.1,265.8,normal
+NG-KW,Kwara,243.0,222.1,21.0,109,25,30,162.3,338.5,normal
+NG-OY,Oyo,220.0,207.2,12.8,106,17,30,93.0,297.7,normal
+NG-LA,Lagos,233.2,222.7,10.5,105,18,30,109.0,334.5,normal
+NG-NI,Niger,282.3,276.9,5.4,102,17,30,185.5,397.8,normal
+NG-AD,Adamawa,227.7,228.1,-0.5,100,18,30,185.2,283.6,normal
+NG-PL,Plateau,241.2,245.8,-4.6,98,16,30,159.4,363.0,normal
+NG-ON,Ondo,307.5,323.1,-15.6,95,12,30,186.2,427.7,normal
+NG-OG,Ogun,205.5,219.3,-13.8,94,13,30,115.0,345.4,normal
+NG-OS,Osun,240.5,264.4,-23.8,91,11,30,139.3,383.7,normal
+NG-TA,Taraba,293.1,327.0,-33.9,90,7,30,261.5,446.0,normal
+NG-KD,Kaduna,280.4,316.8,-36.4,89,7,30,202.9,449.8,normal
+NG-NA,Nasarawa,218.2,259.2,-41.0,84,7,30,190.3,427.9,normal
+NG-ED,Edo,276.6,347.8,-71.2,80,3,30,225.2,465.5,normal
+NG-BE,Benue,245.7,316.4,-70.7,78,2,30,237.8,439.5,normal
+NG-FC,Abuja Federal Capital Territory,189.9,253.8,-63.9,75,0,30,197.6,321.0,normal
+NG-EK,Ekiti,210.9,291.0,-80.0,72,1,30,169.2,466.3,normal
+NG-AK,Akwa Ibom,307.8,442.8,-135.0,70,3,30,267.6,658.3,normal
+NG-CR,Cross River,261.0,390.6,-129.5,67,0,30,279.0,490.6,normal
+NG-DE,Delta,309.8,462.0,-152.2,67,1,30,298.5,624.8,normal
+NG-IM,Imo,263.9,402.7,-138.8,66,1,30,254.6,583.4,normal
+NG-AB,Abia,229.1,370.6,-141.5,62,0,30,250.7,534.3,normal
+NG-AN,Anambra,205.1,335.7,-130.6,61,0,30,233.7,452.2,normal
+NG-KO,Kogi,161.0,268.6,-107.6,60,0,30,194.9,396.4,normal
+NG-EB,Ebonyi,197.4,330.5,-133.1,60,0,30,201.1,448.2,normal
+NG-RI,Rivers,265.9,467.8,-201.9,57,0,30,268.3,741.4,normal
+NG-BY,Bayelsa,313.6,561.9,-248.3,56,1,30,307.2,913.1,normal
+NG-EN,Enugu,167.3,308.8,-141.5,54,0,30,233.6,404.9,normal

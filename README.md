@@ -26,7 +26,7 @@ data/cache/                   Saved baseline values, so they are not re-download
 docs/                         The website (this folder is what GitHub Pages publishes)
   index.html, style.css, app.js
   data/                       Files written by the pipeline for the latest period
-  data/example-2022-09/       The same calculation for Jul–Sep 2022 (historical example)
+  data/example-2022-09/       The same calculation for 1–30 Sept 2022 (historical example)
   vendor/leaflet/             The Leaflet map library (copied in, so no CDN is needed)
 .github/workflows/            The GitHub Action that refreshes data daily and publishes
 ```
@@ -51,7 +51,7 @@ python -m http.server 8000 --directory docs
 
 Then open http://localhost:8000.
 
-To reproduce the historical example:
+To reproduce the historical example (the three dekads of September 2022):
 
 ```bash
 python pipeline/run_pipeline.py --end 2022-09-3 --out docs/data/example-2022-09
@@ -177,3 +177,15 @@ arrangements and testing, which the dissertation identifies as future work.
   administrative boundaries', *PLoS ONE*, 15(4), e0231866.
 - Boundaries: geoBoundaries gbOpen NGA ADM1, source GRID3, CC BY 4.0.
 - Leaflet 1.9.4 (BSD-2-Clause), included in `docs/vendor/leaflet/`.
+
+## The September 2022 historical example: what it does and does not show
+
+Running the same method for 1–30 September 2022 flags five northern states as
+Warning (Jigawa, Kano, Borno, Katsina, Sokoto) and two as Watch (Yobe, Kebbi).
+Those states had unusually heavy local rainfall. Several states widely reported as
+among the worst affected by the 2022 riverine floods, along the Niger and Benue
+(e.g. Kogi, Anambra, Delta, Bayelsa), come out **Normal**. Their flooding came largely from
+river flow originating upstream, which a local rainfall indicator does not measure.
+This is an illustration of the limitation described in dissertation Section 4.7,
+not a validation exercise. A proper evaluation would compare flags against a
+flood-impact record (e.g. state-level event data) across many seasons.

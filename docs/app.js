@@ -8,7 +8,7 @@
 // its files are missing, the option is simply not shown.
 const PERIODS = [
   { dir: "data", label: "Latest available CHIRPS data" },
-  { dir: "data/example-2022-09", label: "Historical example: Jul–Sep 2022", example: true },
+  { dir: "data/example-2022-09", label: "Historical example: September 2022", example: true },
 ];
 
 const FLAG_LABEL = { warning: "Warning", watch: "Watch", normal: "Normal" };
@@ -74,6 +74,7 @@ function fillCards() {
   } else {
     chip.className = "chip"; chip.textContent = "CHIRPS v3.0 · final";
   }
+  document.getElementById("example-note").hidden = !period.example;
   document.getElementById("generated").textContent = summary.generated_utc;
 
   // Rules table, built from the same thresholds the pipeline used.

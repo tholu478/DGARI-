@@ -1,0 +1,48 @@
+{
+  "generated_utc": "2026-11-05 20:25 UTC",
+  "indicator": "Recent CHIRPS rainfall compared with the 1991-2020 average for the same dekads. Rainfall-anomaly indicator only; not a flood forecast.",
+  "period_start": "2022-09-01",
+  "period_end": "2022-09-30",
+  "dekads": [
+    {
+      "label": "1-10 Sep 2022",
+      "product": "final",
+      "url": "https://data.chc.ucsb.edu/products/CHIRPS/v3.0/dekads/africa/tifs/chirps-v3.0.2022.09.1.tif"
+    },
+    {
+      "label": "11-20 Sep 2022",
+      "product": "final",
+      "url": "https://data.chc.ucsb.edu/products/CHIRPS/v3.0/dekads/africa/tifs/chirps-v3.0.2022.09.2.tif"
+    },
+    {
+      "label": "21-30 Sep 2022",
+      "product": "final",
+      "url": "https://data.chc.ucsb.edu/products/CHIRPS/v3.0/dekads/africa/tifs/chirps-v3.0.2022.09.3.tif"
+    }
+  ],
+  "baseline": "1991-2020",
+  "thresholds": {
+    "warning": {
+      "min_percent_of_normal": 150,
+      "min_anomaly_mm": 50
+    },
+    "watch": {
+      "min_percent_of_normal": 125,
+      "min_anomaly_mm": 25
+    }
+  },
+  "counts": {
+    "warning": 5,
+    "watch": 2,
+    "normal": 30
+  },
+  "rainfall_source": "CHIRPS v3.0, Climate Hazards Center, UC Santa Barbara",
+  "boundary_source": {
+    "boundaryID": "NGA-ADM1-27671186",
+    "boundaryYearRepresented": "2022",
+    "boundarySource": "GRID3",
+    "boundaryLicense": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+    "buildDate": "Dec 12, 2023",
+    "gjDownloadURL": "https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/NGA/ADM1/geoBoundaries-NGA-ADM1.geojson"
+  }
+}
